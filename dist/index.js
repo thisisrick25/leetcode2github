@@ -35967,13 +35967,15 @@ function wrappy (fn, cb) {
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(2208);
-const github = __nccwpck_require__(6528);
-const axios = __nccwpck_require__(9179);
+
+const { fetchSubmissions } = __nccwpck_require__(9883);
+const { commitFiles } = __nccwpck_require__(5203);
+const { processSubmissions } = __nccwpck_require__(6196);
+const { getAuthenticatedOctokit } = __nccwpck_require__(8125);
 
 async function run() {
   try {
     // Get inputs
-    const githubToken = core.getInput('github-token', { required: true });
     const leetcodeSession = core.getInput('leetcode-session', { required: true });
     const leetcodeCsrftoken = core.getInput('leetcode-csrftoken', { required: true });
     const destinationFolder = core.getInput('destination-folder');
@@ -36001,9 +36003,10 @@ async function run() {
       core.info(JSON.stringify(processedSubmissions, null, 2));
     }
 
-    // 3. Commit files
-    core.info('Committing files to the repository...');
-    const octokit = github.getOctokit(githubToken);
+    // 3. Authenticate as GitHub App and Commit files
+    core.info('Authenticating as GitHub App and committing files to the repository...');
+    const octokit = await getAuthenticatedOctokit();
+
     await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committerName, committerEmail);
 
     core.info('LeetCode sync completed successfully!');
@@ -36012,77 +36015,20 @@ async function run() {
   }
 }
 
-async function fetchSubmissions(cookie) {
-  const LEETCODE_API_URL = 'https://leetcode.com/api/submissions/';
-  const headers = {
-    Cookie: cookie,
-  };
+module.exports = {
+  run,
+};
 
-  try {
-    const response = await axios.get(LEETCODE_API_URL, { headers });
-    if (response.data && response.data.submissions_dump) {
-      return response.data.submissions_dump;
-    }
-    return [];
-  } catch (error) {
-    throw new Error(`Failed to fetch LeetCode submissions: ${error.message}`);
-  }
-}
 
-function processSubmissions(submissions) {
-  const acceptedSubmissions = submissions.filter(
-    (submission) => submission.status_display === 'Accepted'
-  );
+/***/ }),
 
-  const groupedSubmissions = new Map();
+/***/ 5203:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-  for (const submission of acceptedSubmissions) {
-    const { title_slug, lang } = submission;
-    const key = `${title_slug}-${lang}`;
-
-    if (!groupedSubmissions.has(key) || submission.timestamp > groupedSubmissions.get(key).timestamp) {
-      groupedSubmissions.set(key, submission);
-    }
-  }
-
-  return Array.from(groupedSubmissions.values());
-}
-
-function groupSubmissionsByProblem(submissions) {
-    const problemMap = new Map();
-    for (const submission of submissions) {
-        const { title_slug } = submission;
-        if (!problemMap.has(title_slug)) {
-            problemMap.set(title_slug, []);
-        }
-        problemMap.get(title_slug).push(submission);
-    }
-    return problemMap;
-}
-
-async function getQuestionNumber(titleSlug) {
-    const LEETCODE_GRAPHQL_URL = 'https://leetcode.com/graphql';
-    const query = `
-        query questionData($titleSlug: String!) {
-          question(titleSlug: $titleSlug) {
-            questionFrontendId
-          }
-        }
-    `;
-    const variables = {
-        titleSlug
-    };
-    try {
-        const response = await axios.post(LEETCODE_GRAPHQL_URL, { query, variables });
-        if (response.data && response.data.data && response.data.data.question) {
-            return response.data.data.question.questionFrontendId;
-        }
-        return null;
-    } catch (error) {
-        core.warning(`Failed to fetch question number for ${titleSlug}: ${error.message}`);
-        return null;
-    }
-}
+const core = __nccwpck_require__(2208);
+const github = __nccwpck_require__(6528);
+const { getFileExtension } = __nccwpck_require__(4205);
+const { getQuestionNumber } = __nccwpck_require__(9883);
 
 async function commitFiles(octokit, submissions, destinationFolder, verbose, committerName, committerEmail) {
   const { owner, repo } = github.context.repo;
@@ -36118,9 +36064,8 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
 
 `;
         markdownContent += `
-\`\`\`${lang}
 ${code}
-\`\`\`
+
 `;
     }
 
@@ -36209,6 +36154,106 @@ ${code}`);
   }
 }
 
+module.exports = {
+    commitFiles,
+};
+
+
+/***/ }),
+
+/***/ 8125:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { createAppAuth } = __nccwpck_require__(3959);
+const { Octokit } = __nccwpck_require__(7605);
+const github = __nccwpck_require__(6528);
+const core = __nccwpck_require__(2208);
+
+async function getAuthenticatedOctokit() {
+    const appId = process.env.GH_APP_ID;
+    const privateKey = process.env.GH_APP_PRIVATE_KEY;
+    const installationId = github.context.payload.installation.id;
+
+    if (!appId || !privateKey || !installationId) {
+        core.setFailed('GitHub App credentials (GH_APP_ID, GH_APP_PRIVATE_KEY) or installation ID are missing.');
+        return null;
+    }
+
+    const auth = createAppAuth({
+        appId,
+        privateKey,
+        installationId,
+    });
+
+    const installationAuthentication = await auth({ type: 'installation' });
+    return new Octokit({ auth: installationAuthentication.token });
+}
+
+module.exports = {
+    getAuthenticatedOctokit,
+};
+
+
+/***/ }),
+
+/***/ 9883:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const axios = __nccwpck_require__(9179);
+const core = __nccwpck_require__(2208);
+
+async function fetchSubmissions(cookie) {
+  const LEETCODE_API_URL = 'https://leetcode.com/api/submissions/';
+  const headers = {
+    Cookie: cookie,
+  };
+
+  try {
+    const response = await axios.get(LEETCODE_API_URL, { headers });
+    if (response.data && response.data.submissions_dump) {
+      return response.data.submissions_dump;
+    }
+    return [];
+  } catch (error) {
+    throw new Error(`Failed to fetch LeetCode submissions: ${error.message}`);
+  }
+}
+
+async function getQuestionNumber(titleSlug) {
+    const LEETCODE_GRAPHQL_URL = 'https://leetcode.com/graphql';
+    const query = `
+        query questionData($titleSlug: String!) {
+          question(titleSlug: $titleSlug) {
+            questionFrontendId
+          }
+        }
+    `;
+    const variables = {
+        titleSlug
+    };
+    try {
+        const response = await axios.post(LEETCODE_GRAPHQL_URL, { query, variables });
+        if (response.data && response.data.data && response.data.data.question) {
+            return response.data.data.question.questionFrontendId;
+        }
+        return null;
+    } catch (error) {
+        core.warning(`Failed to fetch question number for ${titleSlug}: ${error.message}`);
+        return null;
+    }
+}
+
+module.exports = {
+    fetchSubmissions,
+    getQuestionNumber,
+};
+
+
+/***/ }),
+
+/***/ 4205:
+/***/ ((module) => {
+
 function getFileExtension(lang) {
     const langMap = {
         'bash': 'sh',
@@ -36234,10 +36279,67 @@ function getFileExtension(lang) {
     return langMap[lang] || 'txt';
 }
 
+module.exports = {
+    getFileExtension,
+};
+
+
+/***/ }),
+
+/***/ 6196:
+/***/ ((module) => {
+
+function processSubmissions(submissions) {
+  const acceptedSubmissions = submissions.filter(
+    (submission) => submission.status_display === 'Accepted'
+  );
+
+  const groupedSubmissions = new Map();
+
+  for (const submission of acceptedSubmissions) {
+    const { title_slug, lang } = submission;
+    const key = `${title_slug}-${lang}`;
+
+    if (!groupedSubmissions.has(key) || submission.timestamp > groupedSubmissions.get(key).timestamp) {
+      groupedSubmissions.set(key, submission);
+    }
+  }
+
+  return Array.from(groupedSubmissions.values());
+}
+
+function groupSubmissionsByProblem(submissions) {
+    const problemMap = new Map();
+    for (const submission of submissions) {
+        const { title_slug } = submission;
+        if (!problemMap.has(title_slug)) {
+            problemMap.set(title_slug, []);
+        }
+        problemMap.get(title_slug).push(submission);
+    }
+    return problemMap;
+}
 
 module.exports = {
-  run,
+    processSubmissions,
+    groupSubmissionsByProblem,
 };
+
+
+/***/ }),
+
+/***/ 3959:
+/***/ ((module) => {
+
+module.exports = eval("require")("@octokit/auth-app");
+
+
+/***/ }),
+
+/***/ 7605:
+/***/ ((module) => {
+
+module.exports = eval("require")("@octokit/rest");
 
 
 /***/ }),
