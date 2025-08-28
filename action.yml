@@ -1,0 +1,27 @@
+name: "LeetCode Sync"
+description: "A GitHub action to sync your LeetCode submissions to your GitHub repository."
+author: "thisisrick25"
+
+inputs:
+  github-token:
+    description: "GitHub token to commit files."
+    required: true
+  leetcode-cookie:
+    description: "LeetCode session cookie for authentication."
+    required: true
+  destination-folder:
+    description: "The folder to store the solutions in."
+    required: false
+    default: "leetcode-solutions"
+  verbose:
+    description: "Enable verbose logging."
+    required: false
+    default: "false"
+
+runs:
+  using: "node16"
+  main: "dist/index.js"
+
+branding:
+  icon: "upload-cloud"
+  color: "orange"
