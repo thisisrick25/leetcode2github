@@ -5,6 +5,7 @@
 [View Solution](0001-two-sum.cpp)
 
 
+```cpp
 class Solution {
 public:
     vector<int> twoSum(vector<int>& nums, int target) {
@@ -21,3 +22,4 @@ public:
         return {};
     }
 };
+```
