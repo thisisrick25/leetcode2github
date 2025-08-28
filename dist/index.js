@@ -33620,9 +33620,8 @@ const core = __nccwpck_require__(2208);
 async function getAuthenticatedOctokit() {
     const appId = process.env.GH_APP_ID;
     const privateKey = process.env.GH_APP_PRIVATE_KEY;
-    const installationId = github.context.payload.installation.id;
 
-    if (!appId || !privateKey || !installationId) {
+    if (!appId || !privateKey) {
         core.setFailed('GitHub App credentials (GH_APP_ID, GH_APP_PRIVATE_KEY) or installation ID are missing.');
         return null;
     }
@@ -33630,7 +33629,6 @@ async function getAuthenticatedOctokit() {
     const auth = createAppAuth({
         appId,
         privateKey,
-        installationId,
     });
 
     const installationAuthentication = await auth({ type: 'installation' });
