@@ -1,14 +1,13 @@
 const core = require('@actions/core');
-const github = require('@actions/github');
 
 const { fetchSubmissions } = require('./services/leetcode');
 const { commitFiles } = require('./services/github');
 const { processSubmissions } = require('./utils/processing');
+const { getAuthenticatedOctokit } = require('./services/githubAuth');
 
 async function run() {
   try {
     // Get inputs
-    const githubToken = core.getInput('github-token', { required: true });
     const leetcodeSession = core.getInput('leetcode-session', { required: true });
     const leetcodeCsrftoken = core.getInput('leetcode-csrftoken', { required: true });
     const destinationFolder = core.getInput('destination-folder');
@@ -36,9 +35,10 @@ async function run() {
       core.info(JSON.stringify(processedSubmissions, null, 2));
     }
 
-    // 3. Commit files
-    core.info('Committing files to the repository...');
-    const octokit = github.getOctokit(githubToken);
+    // 3. Authenticate as GitHub App and Commit files
+    core.info('Authenticating as GitHub App and committing files to the repository...');
+    const octokit = await getAuthenticatedOctokit();
+
     await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committerName, committerEmail);
 
     core.info('LeetCode sync completed successfully!');
