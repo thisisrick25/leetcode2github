@@ -6,9 +6,12 @@ async function run() {
   try {
     // Get inputs
     const githubToken = core.getInput('github-token', { required: true });
-    const leetcodeCookie = core.getInput('leetcode-cookie', { required: true });
+    const leetcodeSession = core.getInput('leetcode-session', { required: true });
+    const leetcodeCsrftoken = core.getInput('leetcode-csrftoken', { required: true });
     const destinationFolder = core.getInput('destination-folder');
     const verbose = core.getInput('verbose') === 'true';
+
+    const leetcodeCookie = `LEETCODE_SESSION=${leetcodeSession}; csrftoken=${leetcodeCsrftoken};`;
 
     // 1. Fetch LeetCode submissions
     core.info('Fetching LeetCode submissions...');

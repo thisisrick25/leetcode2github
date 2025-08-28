@@ -6,8 +6,11 @@ inputs:
   github-token:
     description: "GitHub token to commit files."
     required: true
-  leetcode-cookie:
-    description: "LeetCode session cookie for authentication."
+  leetcode-session:
+    description: "LeetCode session token."
+    required: true
+  leetcode-csrftoken:
+    description: "LeetCode CSRF token."
     required: true
   destination-folder:
     description: "The folder to store the solutions in."
