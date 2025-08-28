@@ -5,6 +5,7 @@
 [View Solution](3393-count-paths-with-the-given-xor-value.cpp)
 
 
+```cpp
 class Solution {
 public:
     int countPathsWithXorValue(vector<vector<int>>& grid, int k) {
@@ -37,3 +38,4 @@ public:
         return dp[m - 1][n - 1][k];
     }
 };
+```
