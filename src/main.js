@@ -10,6 +10,8 @@ async function run() {
     const leetcodeCsrftoken = core.getInput('leetcode-csrftoken', { required: true });
     const destinationFolder = core.getInput('destination-folder');
     const verbose = core.getInput('verbose') === 'true';
+    const committerName = core.getInput('committer-name');
+    const committerEmail = core.getInput('committer-email');
 
     const leetcodeCookie = `LEETCODE_SESSION=${leetcodeSession}; csrftoken=${leetcodeCsrftoken};`;
 
@@ -34,7 +36,7 @@ async function run() {
     // 3. Commit files
     core.info('Committing files to the repository...');
     const octokit = github.getOctokit(githubToken);
-    await commitFiles(octokit, processedSubmissions, destinationFolder, verbose);
+    await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committerName, committerEmail);
 
     core.info('LeetCode sync completed successfully!');
   } catch (error) {
@@ -90,15 +92,49 @@ function groupSubmissionsByProblem(submissions) {
     return problemMap;
 }
 
-async function commitFiles(octokit, submissions, destinationFolder, verbose) {
+async function getQuestionNumber(titleSlug) {
+    const LEETCODE_GRAPHQL_URL = 'https://leetcode.com/graphql';
+    const query = `
+        query questionData($titleSlug: String!) {
+          question(titleSlug: $titleSlug) {
+            questionFrontendId
+          }
+        }
+    `;
+    const variables = {
+        titleSlug
+    };
+    try {
+        const response = await axios.post(LEETCODE_GRAPHQL_URL, { query, variables });
+        if (response.data && response.data.data && response.data.data.question) {
+            return response.data.data.question.questionFrontendId;
+        }
+        return null;
+    } catch (error) {
+        core.warning(`Failed to fetch question number for ${titleSlug}: ${error.message}`);
+        return null;
+    }
+}
+
+async function commitFiles(octokit, submissions, destinationFolder, verbose, committerName, committerEmail) {
   const { owner, repo } = github.context.repo;
+
+  const committer = (committerName && committerEmail)
+    ? { name: committerName, email: committerEmail }
+    : { name: 'leetcode2github', email: 'action@github.com' };
 
   const groupedByProblem = groupSubmissionsByProblem(submissions);
 
   for (const [title_slug, problemSubmissions] of groupedByProblem.entries()) {
-    const filePath = `${destinationFolder}/${title_slug}/${title_slug}.md`;
+    const questionNumber = await getQuestionNumber(title_slug);
+    const paddedQuestionNumber = questionNumber ? String(questionNumber).padStart(4, '0') : null;
+    const full_title_slug = paddedQuestionNumber ? `${paddedQuestionNumber}-${title_slug}` : title_slug;
+
+    const languages = problemSubmissions.map(s => s.lang).join(', ');
+
+    const filePath = `${destinationFolder}/${full_title_slug}/${full_title_slug}.md`;
     
-    let markdownContent = `# ${title_slug}
+    let markdownContent = `# ${paddedQuestionNumber ? `${paddedQuestionNumber}. ` : ''}${title_slug}
 
 `;
 
@@ -135,17 +171,18 @@ ${markdownContent}`);
       // File does not exist, which is fine
     }
 
+    const commitMessage = paddedQuestionNumber
+        ? `solved: ${paddedQuestionNumber} in ${languages}`
+        : `solved: ${title_slug} in ${languages}`;
+
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
       path: filePath,
-      message: `feat: Add/Update solutions for ${title_slug}`,
+      message: commitMessage,
       content: Buffer.from(markdownContent).toString('base64'),
       sha,
-      committer: {
-        name: 'LeetCode Sync Action',
-        email: 'action@github.com',
-      },
+      committer,
       author: {
         name: github.context.actor,
         email: `${github.context.actor}@users.noreply.github.com`,
