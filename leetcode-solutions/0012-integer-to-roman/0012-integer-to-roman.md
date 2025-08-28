@@ -5,6 +5,7 @@
 [View Solution](0012-integer-to-roman.cpp)
 
 
+```cpp
 class Solution {
 public:
     string intToRoman(int num) {
@@ -34,3 +35,4 @@ public:
 
     }
 };
+```
