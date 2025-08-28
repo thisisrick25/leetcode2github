@@ -5,6 +5,7 @@
 [View Solution](0013-roman-to-integer.cpp)
 
 
+```cpp
 class Solution {
 public:
     int romanToInt(string s) {
@@ -29,3 +30,4 @@ public:
         return ans + map[s.back()];
     }
 };
+```
