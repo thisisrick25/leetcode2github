@@ -78,17 +78,45 @@ function processSubmissions(submissions) {
   return Array.from(groupedSubmissions.values());
 }
 
+function groupSubmissionsByProblem(submissions) {
+    const problemMap = new Map();
+    for (const submission of submissions) {
+        const { title_slug } = submission;
+        if (!problemMap.has(title_slug)) {
+            problemMap.set(title_slug, []);
+        }
+        problemMap.get(title_slug).push(submission);
+    }
+    return problemMap;
+}
+
 async function commitFiles(octokit, submissions, destinationFolder, verbose) {
   const { owner, repo } = github.context.repo;
 
-  for (const submission of submissions) {
-    const { title_slug, lang, code } = submission;
-    const fileExtension = getFileExtension(lang);
-    const filePath = `${destinationFolder}/${title_slug}.${fileExtension}`;
+  const groupedByProblem = groupSubmissionsByProblem(submissions);
+
+  for (const [title_slug, problemSubmissions] of groupedByProblem.entries()) {
+    const filePath = `${destinationFolder}/${title_slug}/${title_slug}.md`;
+    
+    let markdownContent = `# ${title_slug}
+
+`;
+
+    for (const submission of problemSubmissions) {
+        const { lang, code } = submission;
+        const fileExtension = getFileExtension(lang);
+        markdownContent += `## ${lang}
+
+`;
+        markdownContent += `
+
+`;
+    }
 
     core.info(`Committing file: ${filePath}`);
     if (verbose) {
-        core.info(`File content:\n${code}`);
+        core.info(`File content:
+${markdownContent}`);
     }
 
     // Check if the file already exists
@@ -111,8 +139,8 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose) {
       owner,
       repo,
       path: filePath,
-      message: `feat: Add ${title_slug} solution in ${lang}`,
-      content: Buffer.from(code).toString('base64'),
+      message: `feat: Add/Update solutions for ${title_slug}`,
+      content: Buffer.from(markdownContent).toString('base64'),
       sha,
       committer: {
         name: 'LeetCode Sync Action',

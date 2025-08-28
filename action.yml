@@ -1,4 +1,4 @@
-name: "LeetCode Sync"
+name: "leetcode2github"
 description: "A GitHub action to sync your LeetCode submissions to your GitHub repository."
 author: "thisisrick25"
 

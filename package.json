@@ -1,10 +1,11 @@
 {
-  "name": "leetcode-sync-action",
+  "name": "leetcode2github",
   "version": "1.0.0",
   "description": "A GitHub action to sync your LeetCode submissions to your GitHub repository.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "ncc build index.js --license licenses.txt"
   },
   "keywords": [
     "github",
