@@ -36100,7 +36100,7 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
 
     const languages = problemSubmissions.map(s => s.lang).join(', ');
 
-    const filePath = `${destinationFolder}/${full_title_slug}/${full_title_slug}.md`;
+    const markdownFilePath = `${destinationFolder}/${full_title_slug}/${full_title_slug}.md`;
     
     let markdownContent = `# ${paddedQuestionNumber ? `${paddedQuestionNumber}. ` : ''}${title_slug}
 
@@ -36109,29 +36109,34 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
     for (const submission of problemSubmissions) {
         const { lang, code } = submission;
         const fileExtension = getFileExtension(lang);
+        const solutionFileName = `${full_title_slug}.${fileExtension}`;
+
         markdownContent += `## ${lang}
 
 `;
-        markdownContent += `
+        markdownContent += `[View Solution](${solutionFileName})
 
+`;
+        markdownContent += `
+${code}
 `;
     }
 
-    core.info(`Committing file: ${filePath}`);
+    core.info(`Committing file: ${markdownFilePath}`);
     if (verbose) {
         core.info(`File content:
 ${markdownContent}`);
     }
 
-    // Check if the file already exists
-    let sha;
+    // Check if the markdown file already exists
+    let markdownFileSha;
     try {
       const { data } = await octokit.rest.repos.getContent({
         owner,
         repo,
-        path: filePath,
+        path: markdownFilePath,
       });
-      sha = data.sha;
+      markdownFileSha = data.sha;
     } catch (error) {
       if (error.status !== 404) {
         throw error;
@@ -36146,16 +36151,59 @@ ${markdownContent}`);
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
-      path: filePath,
+      path: markdownFilePath,
       message: commitMessage,
       content: Buffer.from(markdownContent).toString('base64'),
-      sha,
+      sha: markdownFileSha,
       committer,
       author: {
         name: github.context.actor,
         email: `${github.context.actor}@users.noreply.github.com`,
       },
     });
+
+    // Now, commit individual solution files
+    for (const submission of problemSubmissions) {
+        const { lang, code } = submission;
+        const fileExtension = getFileExtension(lang);
+        const solutionFilePath = `${destinationFolder}/${full_title_slug}/${full_title_slug}.${fileExtension}`;
+
+        core.info(`Committing solution file: ${solutionFilePath}`);
+        if (verbose) {
+            core.info(`Solution file content:
+${code}`);
+        }
+
+        // Check if the solution file already exists
+        let solutionFileSha;
+        try {
+            const { data } = await octokit.rest.repos.getContent({
+                owner,
+                repo,
+                path: solutionFilePath,
+            });
+            solutionFileSha = data.sha;
+        } catch (error) {
+            if (error.status !== 404) {
+                throw error;
+            }
+            // File does not exist, which is fine
+        }
+
+        await octokit.rest.repos.createOrUpdateFileContents({
+            owner,
+            repo,
+            path: solutionFilePath,
+            message: commitMessage, // Use the same commit message
+            content: Buffer.from(code).toString('base64'),
+            sha: solutionFileSha,
+            committer,
+            author: {
+                name: github.context.actor,
+                email: `${github.context.actor}@users.noreply.github.com`,
+            },
+        });
+    }
   }
 }
 
