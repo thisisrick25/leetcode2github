@@ -1,10 +1,3 @@
-# 0020. valid-parentheses
-
-## cpp
-
-[View Solution](0020-valid-parentheses.cpp)
-
-
 class Solution {
 public:
     bool isValid(string s) {

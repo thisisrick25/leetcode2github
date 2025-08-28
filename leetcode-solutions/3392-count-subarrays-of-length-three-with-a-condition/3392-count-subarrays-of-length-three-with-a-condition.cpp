@@ -1,10 +1,3 @@
-# 3392. count-subarrays-of-length-three-with-a-condition
-
-## cpp
-
-[View Solution](3392-count-subarrays-of-length-three-with-a-condition.cpp)
-
-
 class Solution {
 public:
     int countSubarrays(vector<int>& nums) {

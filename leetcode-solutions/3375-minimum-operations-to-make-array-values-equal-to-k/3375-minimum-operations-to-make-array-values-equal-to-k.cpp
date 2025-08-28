@@ -1,10 +1,3 @@
-# 3375. minimum-operations-to-make-array-values-equal-to-k
-
-## cpp
-
-[View Solution](3375-minimum-operations-to-make-array-values-equal-to-k.cpp)
-
-
 class Solution {
 public:
     int minOperations(vector<int>& nums, int k) {

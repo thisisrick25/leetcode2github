@@ -1,10 +1,3 @@
-# 0013. roman-to-integer
-
-## cpp
-
-[View Solution](0013-roman-to-integer.cpp)
-
-
 class Solution {
 public:
     int romanToInt(string s) {

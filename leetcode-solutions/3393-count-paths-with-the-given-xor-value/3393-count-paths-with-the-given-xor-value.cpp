@@ -1,10 +1,3 @@
-# 3393. count-paths-with-the-given-xor-value
-
-## cpp
-
-[View Solution](3393-count-paths-with-the-given-xor-value.cpp)
-
-
 class Solution {
 public:
     int countPathsWithXorValue(vector<vector<int>>& grid, int k) {
