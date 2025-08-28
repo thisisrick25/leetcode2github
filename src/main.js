@@ -150,7 +150,9 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
 
 `;
         markdownContent += `
+\`\`\`${lang}
 ${code}
+\`\`\`
 `;
     }
 
