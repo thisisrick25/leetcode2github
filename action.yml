@@ -3,9 +3,6 @@ description: "A GitHub action to sync your LeetCode submissions to your GitHub r
 author: "thisisrick25"
 
 inputs:
-  github-token:
-    description: "GitHub token to commit files."
-    required: true
   leetcode-session:
     description: "LeetCode session token."
     required: true
