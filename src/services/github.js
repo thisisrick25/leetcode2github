@@ -22,36 +22,21 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
 
     const markdownFilePath = `${destinationFolder}/${full_title_slug}/${full_title_slug}.md`;
     
-    let markdownContent = `# ${paddedQuestionNumber ? `${paddedQuestionNumber}. ` : ''}${title_slug}
-
-`;
+    let markdownContent = `# ${paddedQuestionNumber ? `${paddedQuestionNumber}. ` : ''}${title_slug}\r\n\r\n`;
 
     for (const submission of problemSubmissions) {
         const { lang, code } = submission;
         const fileExtension = getFileExtension(lang);
         const solutionFileName = `${full_title_slug}.${fileExtension}`;
 
-        markdownContent += `## ${lang}
-
-`;
-        markdownContent += `[View Solution](${solutionFileName})
-
-`;
-        markdownContent += `
-\`\`\`${fileExtension}
-${code}
-\`\`\`
-`;
+        markdownContent += `## ${lang}\r\n\r\n`;
+        markdownContent += `[View Solution](${solutionFileName})\r\n\r\n`;
+        markdownContent += `\r\n\`\`\`${fileExtension}\r\n${code}\r\n\`\`\`\r\n`;
     }
 
-    core.info(`Committing file: ${markdownFilePath}`);
-    if (verbose) {
-        core.info(`File content:
-${markdownContent}`);
-    }
-
-    // Check if the markdown file already exists
+    // Check if the markdown file already exists and compare content
     let markdownFileSha;
+    let existingMarkdownContent;
     try {
       const { data } = await octokit.rest.repos.getContent({
         owner,
@@ -59,6 +44,9 @@ ${markdownContent}`);
         path: markdownFilePath,
       });
       markdownFileSha = data.sha;
+      if (data.content) {
+        existingMarkdownContent = Buffer.from(data.content, 'base64').toString('utf8');
+      }
     } catch (error) {
       if (error.status !== 404) {
         throw error;
@@ -66,23 +54,32 @@ ${markdownContent}`);
       // File does not exist, which is fine
     }
 
-    const markdownCommitMessage = paddedQuestionNumber
-        ? `docs(${paddedQuestionNumber}): add solution for ${full_title_slug} [skip ci]`
-        : `docs: add solution for ${full_title_slug} [skip ci]`;
+    if (existingMarkdownContent === markdownContent) {
+        core.info(`Markdown file ${markdownFilePath} is already up-to-date. Skipping.`);
+    } else {
+        core.info(`Committing file: ${markdownFilePath}`);
+        if (verbose) {
+            core.info(`File content:\r\n${markdownContent}`);
+        }
 
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path: markdownFilePath,
-      message: markdownCommitMessage,
-      content: Buffer.from(markdownContent).toString('base64'),
-      sha: markdownFileSha,
-      committer,
-      author: {
-        name: github.context.actor,
-        email: `${github.context.actor}@users.noreply.github.com`,
-      },
-    });
+        const markdownCommitMessage = paddedQuestionNumber
+            ? `docs(${paddedQuestionNumber}): add solution for ${full_title_slug} [skip ci]`
+            : `docs: add solution for ${full_title_slug} [skip ci]`;
+
+        await octokit.rest.repos.createOrUpdateFileContents({
+          owner,
+          repo,
+          path: markdownFilePath,
+          message: markdownCommitMessage,
+          content: Buffer.from(markdownContent).toString('base64'),
+          sha: markdownFileSha,
+          committer,
+          author: {
+            name: github.context.actor,
+            email: `${github.context.actor}@users.noreply.github.com`,
+          },
+        });
+    }
 
     // Now, commit individual solution files
     for (const submission of problemSubmissions) {
@@ -90,14 +87,9 @@ ${markdownContent}`);
         const fileExtension = getFileExtension(lang);
         const solutionFilePath = `${destinationFolder}/${full_title_slug}/${full_title_slug}.${fileExtension}`;
 
-        core.info(`Committing solution file: ${solutionFilePath}`);
-        if (verbose) {
-            core.info(`Solution file content:
-${code}`);
-        }
-
-        // Check if the solution file already exists
+        // Check if the solution file already exists and compare content
         let solutionFileSha;
+        let existingSolutionContent;
         try {
             const { data } = await octokit.rest.repos.getContent({
                 owner,
@@ -105,6 +97,9 @@ ${code}`);
                 path: solutionFilePath,
             });
             solutionFileSha = data.sha;
+            if (data.content) {
+                existingSolutionContent = Buffer.from(data.content, 'base64').toString('utf8');
+            }
         } catch (error) {
             if (error.status !== 404) {
                 throw error;
@@ -112,23 +107,32 @@ ${code}`);
             // File does not exist, which is fine
         }
 
-        const solutionCommitMessage = paddedQuestionNumber
-            ? `feat(${paddedQuestionNumber}): add ${lang} solution for ${full_title_slug} [skip ci]`
-            : `feat: add ${lang} solution for ${full_title_slug} [skip ci]`;
+        if (existingSolutionContent === code) {
+            core.info(`Solution file ${solutionFilePath} is already up-to-date. Skipping.`);
+        } else {
+            core.info(`Committing solution file: ${solutionFilePath}`);
+            if (verbose) {
+                core.info(`Solution file content:\r\n${code}`);
+            }
 
-        await octokit.rest.repos.createOrUpdateFileContents({
-            owner,
-            repo,
-            path: solutionFilePath,
-            message: solutionCommitMessage,
-            content: Buffer.from(code).toString('base64'),
-            sha: solutionFileSha,
-            committer,
-            author: {
-                name: github.context.actor,
-                email: `${github.context.actor}@users.noreply.github.com`,
-            },
-        });
+            const solutionCommitMessage = paddedQuestionNumber
+                ? `feat(${paddedQuestionNumber}): add ${lang} solution for ${full_title_slug} [skip ci]`
+                : `feat: add ${lang} solution for ${full_title_slug} [skip ci]`;
+
+            await octokit.rest.repos.createOrUpdateFileContents({
+                owner,
+                repo,
+                path: solutionFilePath,
+                message: solutionCommitMessage,
+                content: Buffer.from(code).toString('base64'),
+                sha: solutionFileSha,
+                committer,
+                author: {
+                    name: github.context.actor,
+                    email: `${github.context.actor}@users.noreply.github.com`,
+                },
+            });
+        }
     }
   }
 }
