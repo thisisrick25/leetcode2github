@@ -66,9 +66,9 @@ ${markdownContent}`);
       // File does not exist, which is fine
     }
 
-    const commitMessage = paddedQuestionNumber
+    const commitMessage = (paddedQuestionNumber
         ? `solved: ${paddedQuestionNumber} in ${languages}`
-        : `solved: ${title_slug} in ${languages}`;
+        : `solved: ${title_slug} in ${languages}`) + ' [skip ci]';
 
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
