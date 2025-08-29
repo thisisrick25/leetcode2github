@@ -66,15 +66,15 @@ ${markdownContent}`);
       // File does not exist, which is fine
     }
 
-    const commitMessage = (paddedQuestionNumber
-        ? `solved: ${paddedQuestionNumber} in ${languages}`
-        : `solved: ${title_slug} in ${languages}`) + ' [skip ci]';
+    const markdownCommitMessage = paddedQuestionNumber
+        ? `docs(${paddedQuestionNumber}): add solution for ${full_title_slug} [skip ci]`
+        : `docs: add solution for ${full_title_slug} [skip ci]`;
 
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
       path: markdownFilePath,
-      message: commitMessage,
+      message: markdownCommitMessage,
       content: Buffer.from(markdownContent).toString('base64'),
       sha: markdownFileSha,
       committer,
@@ -112,11 +112,15 @@ ${code}`);
             // File does not exist, which is fine
         }
 
+        const solutionCommitMessage = paddedQuestionNumber
+            ? `feat(${paddedQuestionNumber}): add ${lang} solution for ${full_title_slug} [skip ci]`
+            : `feat: add ${lang} solution for ${full_title_slug} [skip ci]`;
+
         await octokit.rest.repos.createOrUpdateFileContents({
             owner,
             repo,
             path: solutionFilePath,
-            message: commitMessage, // Use the same commit message
+            message: solutionCommitMessage,
             content: Buffer.from(code).toString('base64'),
             sha: solutionFileSha,
             committer,
