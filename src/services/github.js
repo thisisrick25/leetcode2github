@@ -2,6 +2,7 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const { getFileExtension } = require('../utils/file');
 const { getQuestionNumber } = require('./leetcode');
+const { groupSubmissionsByProblem } = require('../utils/processing');
 
 async function commitFiles(octokit, submissions, destinationFolder, verbose, committerName, committerEmail) {
   const { owner, repo } = github.context.repo;
