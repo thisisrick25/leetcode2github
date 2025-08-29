@@ -6,11 +6,9 @@ inputs:
   app-id:
     description: "GitHub App ID."
     required: true
-    default: ${{ secrets.GH_APP_ID }}
   private-key:
     description: "GitHub App Private Key."
     required: true
-    default: ${{ secrets.GH_APP_PRIVATE_KEY }}
   leetcode-session:
     description: "LeetCode session token."
     required: true
@@ -33,7 +31,7 @@ inputs:
     required: false
 
 runs:
-  using: "node20"
+  using: "node16"
   main: "dist/index.js"
 
 branding:
