@@ -34327,7 +34327,7 @@ async function fetchSubmissions(cookie, lastTimestamp = 0) {
         }
 
         offset += limit;
-        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+        await new Promise(resolve => setTimeout(resolve, 5000)); // 5s delay
       } else {
         break; // No more submissions
       }
