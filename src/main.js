@@ -8,6 +8,8 @@ const { getAuthenticatedOctokit } = require('./services/githubAuth');
 async function run() {
   try {
     // Get inputs
+    const appId = core.getInput('app-id', { required: true });
+    const privateKey = core.getInput('private-key', { required: true });
     const leetcodeSession = core.getInput('leetcode-session', { required: true });
     const leetcodeCsrftoken = core.getInput('leetcode-csrftoken', { required: true });
     const destinationFolder = core.getInput('destination-folder');
@@ -37,7 +39,7 @@ async function run() {
 
     // 3. Authenticate as GitHub App and Commit files
     core.info('Authenticating as GitHub App and committing files to the repository...');
-    const octokit = await getAuthenticatedOctokit();
+    const octokit = await getAuthenticatedOctokit(appId, privateKey);
 
     await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committerName, committerEmail);
 
