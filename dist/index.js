@@ -34073,6 +34073,7 @@ module.exports = {
   run,
 };
 
+
 /***/ }),
 
 /***/ 5203:
@@ -34287,7 +34288,9 @@ const core = __nccwpck_require__(2208);
 async function fetchSubmissions(cookie, lastTimestamp = 0) {
   const LEETCODE_API_URL = 'https://leetcode.com/api/submissions/';
   const headers = {
-    Cookie: cookie,
+    'Cookie': cookie,
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+    'Referer': 'https://leetcode.com/submissions/',
   };
   let allNewSubmissions = [];
   let offset = 0;
@@ -34324,6 +34327,7 @@ async function fetchSubmissions(cookie, lastTimestamp = 0) {
         }
 
         offset += limit;
+        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
       } else {
         break; // No more submissions
       }
