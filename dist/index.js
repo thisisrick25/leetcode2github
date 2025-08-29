@@ -34077,8 +34077,9 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
 
 `;
         markdownContent += `
+\`\`\`${fileExtension}
 ${code}
-
+\`\`\`
 `;
     }
 
