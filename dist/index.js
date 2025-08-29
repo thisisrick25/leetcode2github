@@ -34090,7 +34090,7 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
 
   const committer = (committerName && committerEmail)
     ? { name: committerName, email: committerEmail }
-    : { name: 'leetcode2github', email: 'action@github.com' };
+    : { name: 'leetcode2github[bot]', email: '229200791+leetcode2github[bot]@users.noreply.github.com' };
 
   const groupedByProblem = processing.groupSubmissionsByProblem(submissions);
 
