@@ -34041,6 +34041,7 @@ const core = __nccwpck_require__(2208);
 const github = __nccwpck_require__(6528);
 const { getFileExtension } = __nccwpck_require__(4205);
 const { getQuestionNumber } = __nccwpck_require__(9883);
+const processing = __nccwpck_require__(6196);
 
 async function commitFiles(octokit, submissions, destinationFolder, verbose, committerName, committerEmail) {
   const { owner, repo } = github.context.repo;
@@ -34049,7 +34050,7 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
     ? { name: committerName, email: committerEmail }
     : { name: 'leetcode2github', email: 'action@github.com' };
 
-  const groupedByProblem = groupSubmissionsByProblem(submissions);
+  const groupedByProblem = processing.groupSubmissionsByProblem(submissions);
 
   for (const [title_slug, problemSubmissions] of groupedByProblem.entries()) {
     const questionNumber = await getQuestionNumber(title_slug);

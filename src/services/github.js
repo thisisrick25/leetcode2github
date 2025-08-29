@@ -2,7 +2,7 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const { getFileExtension } = require('../utils/file');
 const { getQuestionNumber } = require('./leetcode');
-const { groupSubmissionsByProblem } = require('../utils/processing');
+const processing = require('../utils/processing');
 
 async function commitFiles(octokit, submissions, destinationFolder, verbose, committerName, committerEmail) {
   const { owner, repo } = github.context.repo;
@@ -11,7 +11,7 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
     ? { name: committerName, email: committerEmail }
     : { name: 'leetcode2github', email: 'action@github.com' };
 
-  const groupedByProblem = groupSubmissionsByProblem(submissions);
+  const groupedByProblem = processing.groupSubmissionsByProblem(submissions);
 
   for (const [title_slug, problemSubmissions] of groupedByProblem.entries()) {
     const questionNumber = await getQuestionNumber(title_slug);
