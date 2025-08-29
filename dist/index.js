@@ -33986,6 +33986,8 @@ const { getAuthenticatedOctokit } = __nccwpck_require__(8125);
 async function run() {
   try {
     // Get inputs
+    const appId = core.getInput('app-id', { required: true });
+    const privateKey = core.getInput('private-key', { required: true });
     const leetcodeSession = core.getInput('leetcode-session', { required: true });
     const leetcodeCsrftoken = core.getInput('leetcode-csrftoken', { required: true });
     const destinationFolder = core.getInput('destination-folder');
@@ -34015,7 +34017,7 @@ async function run() {
 
     // 3. Authenticate as GitHub App and Commit files
     core.info('Authenticating as GitHub App and committing files to the repository...');
-    const octokit = await getAuthenticatedOctokit();
+    const octokit = await getAuthenticatedOctokit(appId, privateKey);
 
     await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committerName, committerEmail);
 
@@ -34177,8 +34179,13 @@ module.exports = {
 const { createAppAuth } = __nccwpck_require__(1163);
 const { Octokit } = __nccwpck_require__(7066);
 const github = __nccwpck_require__(6528);
+const core = __nccwpck_require__(2208); // Added this line
 
 async function getAuthenticatedOctokit(appId, privateKey) {
+    // Add these debug lines:
+    core.debug(`DEBUG: appId received: ${appId}`);
+    core.debug(`DEBUG: privateKey received (first 20 chars): ${privateKey ? privateKey.substring(0, 20) + '...' : 'undefined'}`);
+
     // 1. Authenticate as the app to get an app-level JWT
     const appAuth = createAppAuth({
         appId,
@@ -34188,10 +34195,6 @@ async function getAuthenticatedOctokit(appId, privateKey) {
     const appOctokit = new Octokit({ auth: appAuthentication.token });
 
     // 2. Get the installation ID for the current repository
-    // This requires the owner and repo from the GitHub context
-    // We'll assume github.context is available in main.js and passed here,
-    // or we can get it from @actions/github directly if needed.
-    // Let's import @actions/github here to make it self-contained.
     const { owner, repo } = github.context.repo;
 
     let installationId;
@@ -34202,8 +34205,6 @@ async function getAuthenticatedOctokit(appId, privateKey) {
         });
         installationId = installation.id;
     } catch (error) {
-        // Handle cases where the app is not installed on this repo
-        // or if there's an API error.
         console.error(`Failed to get installation ID for ${owner}/${repo}: ${error.message}`);
         throw new Error(`GitHub App not installed on this repository or API error.`);
     }
@@ -34223,7 +34224,6 @@ async function getAuthenticatedOctokit(appId, privateKey) {
 module.exports = {
     getAuthenticatedOctokit,
 };
-
 
 /***/ }),
 
