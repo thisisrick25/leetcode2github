@@ -1,25 +1,46 @@
 const { createAppAuth } = require('@octokit/auth-app');
 const { Octokit } = require('@octokit/rest');
 const github = require('@actions/github');
-const core = require('@actions/core');
 
-async function getAuthenticatedOctokit() {
-    const appId = process.env.GH_APP_ID;
-    const privateKey = process.env.GH_APP_PRIVATE_KEY;
-    const installationId = github.context.payload.installation.id;
+async function getAuthenticatedOctokit(appId, privateKey) {
+    // 1. Authenticate as the app to get an app-level JWT
+    const appAuth = createAppAuth({
+        appId,
+        privateKey,
+    });
+    const appAuthentication = await appAuth({ type: 'app' });
+    const appOctokit = new Octokit({ auth: appAuthentication.token });
 
-    if (!appId || !privateKey || !installationId) {
-        core.setFailed('GitHub App credentials (GH_APP_ID, GH_APP_PRIVATE_KEY) or installation ID are missing.');
-        return null;
+    // 2. Get the installation ID for the current repository
+    // This requires the owner and repo from the GitHub context
+    // We'll assume github.context is available in main.js and passed here,
+    // or we can get it from @actions/github directly if needed.
+    // Let's import @actions/github here to make it self-contained.
+    const { owner, repo } = github.context.repo;
+
+    let installationId;
+    try {
+        const { data: installation } = await appOctokit.request('GET /repos/{owner}/{repo}/installation', {
+            owner,
+            repo,
+        });
+        installationId = installation.id;
+    } catch (error) {
+        // Handle cases where the app is not installed on this repo
+        // or if there's an API error.
+        console.error(`Failed to get installation ID for ${owner}/${repo}: ${error.message}`);
+        throw new Error(`GitHub App not installed on this repository or API error.`);
     }
 
-    const auth = createAppAuth({
+    // 3. Authenticate as the installation to get an installation access token
+    const installationAuth = createAppAuth({
         appId,
         privateKey,
         installationId,
     });
+    const installationAuthentication = await installationAuth({ type: 'installation' });
 
-    const installationAuthentication = await auth({ type: 'installation' });
+    // 4. Return Octokit instance authenticated with the installation token
     return new Octokit({ auth: installationAuthentication.token });
 }
 
