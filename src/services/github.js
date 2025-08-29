@@ -4,12 +4,8 @@ const { getFileExtension } = require('../utils/file');
 const { getQuestionNumber } = require('./leetcode');
 const processing = require('../utils/processing');
 
-async function commitFiles(octokit, submissions, destinationFolder, verbose, committerName, committerEmail) {
+async function commitFiles(octokit, submissions, destinationFolder, verbose, committer, author) { 
   const { owner, repo } = github.context.repo;
-
-  const committer = (committerName && committerEmail)
-    ? { name: committerName, email: committerEmail }
-    : { name: 'leetcode2github', email: 'action@github.com' };
 
   const groupedByProblem = processing.groupSubmissionsByProblem(submissions);
 
@@ -74,10 +70,7 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
           content: Buffer.from(markdownContent).toString('base64'),
           sha: markdownFileSha,
           committer,
-          author: {
-            name: github.context.actor,
-            email: `${github.context.actor}@users.noreply.github.com`,
-          },
+          author,
         });
     }
 
@@ -127,10 +120,7 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
                 content: Buffer.from(code).toString('base64'),
                 sha: solutionFileSha,
                 committer,
-                author: {
-                    name: github.context.actor,
-                    email: `${github.context.actor}@users.noreply.github.com`,
-                },
+                author,
             });
         }
     }

@@ -17,8 +17,14 @@ async function run() {
     const leetcodeCsrftoken = core.getInput('leetcode-csrftoken', { required: true });
     const destinationFolder = core.getInput('destination-folder');
     const verbose = core.getInput('verbose') === 'true';
-    const committerName = core.getInput('committer-name');
-    const committerEmail = core.getInput('committer-email');
+
+    // Hardcode config for bot committer
+    const committerName = 'leetcode2github[bot]';
+    const committerEmail = '229200791+leetcode2github[bot]@users.noreply.github.com';
+
+    // Declare committer and author objects
+    const committer = { name: committerName, email: committerEmail };
+    const author = { name: github.context.actor, email: `${github.context.actor}@users.noreply.github.com` };
 
     const leetcodeCookie = `LEETCODE_SESSION=${leetcodeSession}; csrftoken=${leetcodeCsrftoken};`;
 
@@ -61,15 +67,12 @@ async function run() {
     // 4. Commit files if there are new submissions
     if (processedSubmissions.length > 0) {
         core.info('Committing files to the repository...');
-        await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committerName, committerEmail);
+        await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committer, author); // Pass objects
 
         // 5. Update state file
         core.info('Updating sync state file...');
         const newLastTimestamp = Math.max(...processedSubmissions.map(s => s.timestamp));
         const newState = { lastTimestamp: newLastTimestamp };
-        const committer = (committerName && committerEmail)
-            ? { name: committerName, email: committerEmail }
-            : { name: 'leetcode2github', email: 'action@github.com' };
 
         await octokit.rest.repos.createOrUpdateFileContents({
             owner: github.context.repo.owner,
@@ -79,7 +82,7 @@ async function run() {
             content: Buffer.from(JSON.stringify(newState, null, 2)).toString('base64'),
             sha: stateFileSha,
             committer,
-            author: { name: github.context.actor, email: `${github.context.actor}@users.noreply.github.com` },
+            author,
         });
     } else {
         core.info('No new submissions to sync.');
