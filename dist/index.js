@@ -33995,12 +33995,23 @@ async function run() {
     const leetcodeCsrftoken = core.getInput('leetcode-csrftoken', { required: true });
     const destinationFolder = core.getInput('destination-folder');
     const verbose = core.getInput('verbose') === 'true';
-    const committerName = core.getInput('committer-name');
-    const committerEmail = core.getInput('committer-email');
+    let committerName = core.getInput('committer-name');
+    let committerEmail = core.getInput('committer-email');
 
     const leetcodeCookie = `LEETCODE_SESSION=${leetcodeSession}; csrftoken=${leetcodeCsrftoken};`;
 
     const octokit = await getAuthenticatedOctokit(appId, privateKey);
+
+    // Get app details for bot committer if not provided
+    if (!committerName || !committerEmail) {
+        const { data: app } = await octokit.rest.apps.getAuthenticated();
+        if (!committerName) {
+            committerName = `${app.slug}[bot]`;
+        }
+        if (!committerEmail) {
+            committerEmail = `${app.id}+${app.slug}[bot]@users.noreply.github.com`;
+        }
+    }
 
     // 1. Get last timestamp from state file
     let lastTimestamp = 0;
@@ -34045,9 +34056,8 @@ async function run() {
         core.info('Updating sync state file...');
         const newLastTimestamp = Math.max(...processedSubmissions.map(s => s.timestamp));
         const newState = { lastTimestamp: newLastTimestamp };
-        const committer = (committerName && committerEmail)
-            ? { name: committerName, email: committerEmail }
-            : { name: 'leetcode2github', email: 'action@github.com' };
+        const committer = { name: committerName, email: committerEmail };
+        const author = { name: github.context.actor, email: `${github.context.actor}@users.noreply.github.com` };
 
         await octokit.rest.repos.createOrUpdateFileContents({
             owner: github.context.repo.owner,
@@ -34057,7 +34067,7 @@ async function run() {
             content: Buffer.from(JSON.stringify(newState, null, 2)).toString('base64'),
             sha: stateFileSha,
             committer,
-            author: { name: github.context.actor, email: `${github.context.actor}@users.noreply.github.com` },
+            author,
         });
     } else {
         core.info('No new submissions to sync.');
@@ -34073,7 +34083,6 @@ module.exports = {
   run,
 };
 
-
 /***/ }),
 
 /***/ 5203:
@@ -34088,9 +34097,8 @@ const processing = __nccwpck_require__(6196);
 async function commitFiles(octokit, submissions, destinationFolder, verbose, committerName, committerEmail) {
   const { owner, repo } = github.context.repo;
 
-  const committer = (committerName && committerEmail)
-    ? { name: committerName, email: committerEmail }
-    : { name: 'leetcode2github', email: 'action@github.com' };
+  const committer = { name: committerName, email: committerEmail };
+  const author = { name: github.context.actor, email: `${github.context.actor}@users.noreply.github.com` };
 
   const groupedByProblem = processing.groupSubmissionsByProblem(submissions);
 
@@ -34155,10 +34163,7 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
           content: Buffer.from(markdownContent).toString('base64'),
           sha: markdownFileSha,
           committer,
-          author: {
-            name: github.context.actor,
-            email: `${github.context.actor}@users.noreply.github.com`,
-          },
+          author,
         });
     }
 
@@ -34208,10 +34213,7 @@ async function commitFiles(octokit, submissions, destinationFolder, verbose, com
                 content: Buffer.from(code).toString('base64'),
                 sha: solutionFileSha,
                 committer,
-                author: {
-                    name: github.context.actor,
-                    email: `${github.context.actor}@users.noreply.github.com`,
-                },
+                author,
             });
         }
     }
