@@ -3563,7 +3563,7 @@ __export(index_exports, {
   Octokit: () => Octokit
 });
 module.exports = __toCommonJS(index_exports);
-var import_universal_user_agent = __nccwpck_require__(7501);
+var import_universal_user_agent = __nccwpck_require__(9882);
 var import_before_after_hook = __nccwpck_require__(5339);
 var import_request = __nccwpck_require__(5562);
 var import_graphql = __nccwpck_require__(7995);
@@ -3741,7 +3741,7 @@ __export(dist_src_exports, {
 module.exports = __toCommonJS(dist_src_exports);
 
 // pkg/dist-src/defaults.js
-var import_universal_user_agent = __nccwpck_require__(7501);
+var import_universal_user_agent = __nccwpck_require__(9882);
 
 // pkg/dist-src/version.js
 var VERSION = "9.0.6";
@@ -4124,7 +4124,7 @@ __export(dist_src_exports, {
 });
 module.exports = __toCommonJS(dist_src_exports);
 var import_endpoint = __nccwpck_require__(592);
-var import_universal_user_agent = __nccwpck_require__(7501);
+var import_universal_user_agent = __nccwpck_require__(9882);
 
 // pkg/dist-src/version.js
 var VERSION = "8.4.1";
@@ -4324,7 +4324,7 @@ var request = withDefaults(import_endpoint.endpoint, {
 
 /***/ }),
 
-/***/ 7501:
+/***/ 9882:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -8515,7 +8515,7 @@ module.exports = typeof Reflect !== 'undefined' && Reflect && Reflect.apply;
 
 /***/ }),
 
-/***/ 9882:
+/***/ 7501:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 var util = __nccwpck_require__(9023);
@@ -9792,7 +9792,7 @@ module.exports.wrap = wrap;
 "use strict";
 
 
-var CombinedStream = __nccwpck_require__(9882);
+var CombinedStream = __nccwpck_require__(7501);
 var util = __nccwpck_require__(9023);
 var path = __nccwpck_require__(6928);
 var http = __nccwpck_require__(8611);
@@ -33977,11 +33977,14 @@ function wrappy (fn, cb) {
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(2208);
+const github = __nccwpck_require__(6528);
 
 const { fetchSubmissions } = __nccwpck_require__(9883);
 const { commitFiles } = __nccwpck_require__(5203);
 const { processSubmissions } = __nccwpck_require__(6196);
 const { getAuthenticatedOctokit } = __nccwpck_require__(8125);
+
+const STATE_FILE_PATH = '.leetcode-sync-state.json';
 
 async function run() {
   try {
@@ -33997,29 +34000,68 @@ async function run() {
 
     const leetcodeCookie = `LEETCODE_SESSION=${leetcodeSession}; csrftoken=${leetcodeCsrftoken};`;
 
-    // 1. Fetch LeetCode submissions
-    core.info('Fetching LeetCode submissions...');
-    const submissions = await fetchSubmissions(leetcodeCookie);
-    core.info(`Found ${submissions.length} submissions.`);
-    if (verbose) {
+    const octokit = await getAuthenticatedOctokit(appId, privateKey);
+
+    // 1. Get last timestamp from state file
+    let lastTimestamp = 0;
+    let stateFileSha;
+    try {
+        const { data } = await octokit.rest.repos.getContent({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            path: STATE_FILE_PATH,
+        });
+        if (data.content) {
+            const content = Buffer.from(data.content, 'base64').toString('utf8');
+            lastTimestamp = JSON.parse(content).lastTimestamp;
+            stateFileSha = data.sha;
+            core.info(`Last sync timestamp found: ${lastTimestamp}`);
+        }
+    } catch (error) {
+        if (error.status !== 404) throw error;
+        core.info('State file not found. This must be the first run.');
+    }
+
+    // 2. Fetch LeetCode submissions
+    const submissions = await fetchSubmissions(leetcodeCookie, lastTimestamp);
+    if (verbose && submissions.length > 0) {
       core.info('Fetched submissions:');
       core.info(JSON.stringify(submissions, null, 2));
     }
 
-    // 2. Process submissions
-    core.info('Processing submissions...');
+    // 3. Process submissions
     const processedSubmissions = processSubmissions(submissions);
-    core.info(`Found ${processedSubmissions.length} unique accepted submissions.`);
-    if (verbose) {
+    if (verbose && processedSubmissions.length > 0) {
       core.info('Processed submissions:');
       core.info(JSON.stringify(processedSubmissions, null, 2));
     }
 
-    // 3. Authenticate as GitHub App and Commit files
-    core.info('Authenticating as GitHub App and committing files to the repository...');
-    const octokit = await getAuthenticatedOctokit(appId, privateKey);
+    // 4. Commit files if there are new submissions
+    if (processedSubmissions.length > 0) {
+        core.info('Committing files to the repository...');
+        await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committerName, committerEmail);
 
-    await commitFiles(octokit, processedSubmissions, destinationFolder, verbose, committerName, committerEmail);
+        // 5. Update state file
+        core.info('Updating sync state file...');
+        const newLastTimestamp = Math.max(...processedSubmissions.map(s => s.timestamp));
+        const newState = { lastTimestamp: newLastTimestamp };
+        const committer = (committerName && committerEmail)
+            ? { name: committerName, email: committerEmail }
+            : { name: 'leetcode2github', email: 'action@github.com' };
+
+        await octokit.rest.repos.createOrUpdateFileContents({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            path: STATE_FILE_PATH,
+            message: 'chore: update leetcode sync state [skip ci]',
+            content: Buffer.from(JSON.stringify(newState, null, 2)).toString('base64'),
+            sha: stateFileSha,
+            committer,
+            author: { name: github.context.actor, email: `${github.context.actor}@users.noreply.github.com` },
+        });
+    } else {
+        core.info('No new submissions to sync.');
+    }
 
     core.info('LeetCode sync completed successfully!');
   } catch (error) {
@@ -34030,7 +34072,6 @@ async function run() {
 module.exports = {
   run,
 };
-
 
 /***/ }),
 
@@ -34180,6 +34221,7 @@ module.exports = {
     commitFiles,
 };
 
+
 /***/ }),
 
 /***/ 8125:
@@ -34242,18 +34284,52 @@ module.exports = {
 const axios = __nccwpck_require__(9179);
 const core = __nccwpck_require__(2208);
 
-async function fetchSubmissions(cookie) {
+async function fetchSubmissions(cookie, lastTimestamp = 0) {
   const LEETCODE_API_URL = 'https://leetcode.com/api/submissions/';
   const headers = {
     Cookie: cookie,
   };
+  let allNewSubmissions = [];
+  let offset = 0;
+  const limit = 20; // API returns 20 submissions per page
+
+  core.info(`Fetching submissions with timestamp greater than ${lastTimestamp}`);
 
   try {
-    const response = await axios.get(LEETCODE_API_URL, { headers });
-    if (response.data && response.data.submissions_dump) {
-      return response.data.submissions_dump;
+    while (true) {
+      const url = `${LEETCODE_API_URL}?offset=${offset}&limit=${limit}`;
+      core.info(`Fetching from: ${url}`);
+      const response = await axios.get(url, { headers });
+
+      if (response.data && response.data.submissions_dump) {
+        const submissions = response.data.submissions_dump;
+        let foundOlderSubmission = false;
+
+        const newSubmissions = [];
+        for (const submission of submissions) {
+          if (submission.timestamp > lastTimestamp) {
+            newSubmissions.push(submission);
+          } else {
+            foundOlderSubmission = true;
+            break;
+          }
+        }
+        
+        if (newSubmissions.length > 0) {
+            allNewSubmissions = allNewSubmissions.concat(newSubmissions);
+        }
+
+        if (foundOlderSubmission || !response.data.has_next) {
+          break; // Stop if we found an old submission or there are no more pages
+        }
+
+        offset += limit;
+      } else {
+        break; // No more submissions
+      }
     }
-    return [];
+    core.info(`Found ${allNewSubmissions.length} new submissions.`);
+    return allNewSubmissions;
   } catch (error) {
     throw new Error(`Failed to fetch LeetCode submissions: ${error.message}`);
   }
