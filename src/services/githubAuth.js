@@ -1,8 +1,13 @@
 const { createAppAuth } = require('@octokit/auth-app');
 const { Octokit } = require('@octokit/rest');
 const github = require('@actions/github');
+const core = require('@actions/core'); // Added this line
 
 async function getAuthenticatedOctokit(appId, privateKey) {
+    // Add these debug lines:
+    core.debug(`DEBUG: appId received: ${appId}`);
+    core.debug(`DEBUG: privateKey received (first 20 chars): ${privateKey ? privateKey.substring(0, 20) + '...' : 'undefined'}`);
+
     // 1. Authenticate as the app to get an app-level JWT
     const appAuth = createAppAuth({
         appId,
@@ -12,10 +17,6 @@ async function getAuthenticatedOctokit(appId, privateKey) {
     const appOctokit = new Octokit({ auth: appAuthentication.token });
 
     // 2. Get the installation ID for the current repository
-    // This requires the owner and repo from the GitHub context
-    // We'll assume github.context is available in main.js and passed here,
-    // or we can get it from @actions/github directly if needed.
-    // Let's import @actions/github here to make it self-contained.
     const { owner, repo } = github.context.repo;
 
     let installationId;
@@ -26,8 +27,6 @@ async function getAuthenticatedOctokit(appId, privateKey) {
         });
         installationId = installation.id;
     } catch (error) {
-        // Handle cases where the app is not installed on this repo
-        // or if there's an API error.
         console.error(`Failed to get installation ID for ${owner}/${repo}: ${error.message}`);
         throw new Error(`GitHub App not installed on this repository or API error.`);
     }
