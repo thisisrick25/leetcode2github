@@ -1,0 +1,96 @@
+---
+number: 139
+slug: word-break
+title: Word Break
+difficulty: Medium
+languages: cpp
+generated_at: 2025-11-20T18:15:10.821Z
+---
+
+# 0139. Word Break
+
+**URL:** [https://leetcode.com/problems/word-break/](https://leetcode.com/problems/word-break/)  
+**Difficulty:** Medium  
+**Languages:** cpp
+
+---
+
+## Problem Description
+
+<p>Given a string <code>s</code> and a dictionary of strings <code>wordDict</code>, return <code>true</code> if <code>s</code> can be segmented into a space-separated sequence of one or more dictionary words.</p>
+
+<p><strong>Note</strong> that the same word in the dictionary may be reused multiple times in the segmentation.</p>
+
+<p>&nbsp;</p>
+<p><strong class="example">Example 1:</strong></p>
+
+<pre>
+<strong>Input:</strong> s = &quot;leetcode&quot;, wordDict = [&quot;leet&quot;,&quot;code&quot;]
+<strong>Output:</strong> true
+<strong>Explanation:</strong> Return true because &quot;leetcode&quot; can be segmented as &quot;leet code&quot;.
+</pre>
+
+<p><strong class="example">Example 2:</strong></p>
+
+<pre>
+<strong>Input:</strong> s = &quot;applepenapple&quot;, wordDict = [&quot;apple&quot;,&quot;pen&quot;]
+<strong>Output:</strong> true
+<strong>Explanation:</strong> Return true because &quot;applepenapple&quot; can be segmented as &quot;apple pen apple&quot;.
+Note that you are allowed to reuse a dictionary word.
+</pre>
+
+<p><strong class="example">Example 3:</strong></p>
+
+<pre>
+<strong>Input:</strong> s = &quot;catsandog&quot;, wordDict = [&quot;cats&quot;,&quot;dog&quot;,&quot;sand&quot;,&quot;and&quot;,&quot;cat&quot;]
+<strong>Output:</strong> false
+</pre>
+
+<p>&nbsp;</p>
+<p><strong>Constraints:</strong></p>
+
+<ul>
+	<li><code>1 &lt;= s.length &lt;= 300</code></li>
+	<li><code>1 &lt;= wordDict.length &lt;= 1000</code></li>
+	<li><code>1 &lt;= wordDict[i].length &lt;= 20</code></li>
+	<li><code>s</code> and <code>wordDict[i]</code> consist of only lowercase English letters.</li>
+	<li>All the strings of <code>wordDict</code> are <strong>unique</strong>.</li>
+</ul>
+
+
+---
+
+## Solutions
+
+- [cpp](0139-word-break.cpp) — 2023-08-04T20:03:52.000Z
+
+---
+
+### cpp — 2023-08-04T20:03:52.000Z
+
+- Runtime: 15 ms  
+- Memory: 13.4 MB  
+
+[View raw solution](0139-word-break.cpp)
+
+
+```cpp
+class Solution {
+public:
+    bool wordBreak(string s, vector<string>& wordDict) {
+        vector<bool> dp(s.size()+1, 0);
+        dp[0] = true;
+        unordered_set<string> set(wordDict.begin(), wordDict.end());
+        for(int i=1; i<=s.size(); i++){
+            for(int j=0; j<i; j++){
+                if(dp[j] && set.count(s.substr(j, i-j))){
+                    dp[i] = true;
+                    break;
+                }
+            }
+        }
+        return dp[s.size()];
+    }
+};
+```
+
