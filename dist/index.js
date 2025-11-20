@@ -52603,12 +52603,19 @@ function generateMarkdown({
   );
 
   // Frontmatter metadata
+  const paddedNumber = questionNumber
+    ? String(questionNumber).padStart(4, "0")
+    : null;
+  const latestSolvedAt =
+    submissions.length > 0
+      ? formatTimestamp(Math.max(...submissions.map((s) => s.timestamp)))
+      : null;
   const meta = {
-    number: questionNumber || null,
+    number: paddedNumber,
     slug: titleSlug,
-    title: headerTitle,
     difficulty: difficulty || null,
     languages,
+    latest_solved_at: latestSolvedAt,
     generated_at: new Date().toISOString(),
   };
 
@@ -52619,7 +52626,9 @@ function generateMarkdown({
   md += `# ${padded ? `${padded}. ` : ""}${headerTitle}\n\n`;
   md += `**URL:** [${problemUrl}](${problemUrl})  \n`;
   if (difficulty) md += `**Difficulty:** ${difficulty}  \n`;
-  md += `**Languages:** ${languages}\n\n---\n\n`;
+  md += `**Languages:** ${languages}\n\n`;
+  if (latestSolvedAt) md += `**Latest Solved At:** ${latestSolvedAt}\n\n`;
+  md += `---\n\n`;
 
   // Problem content (converted from HTML to Markdown)
   if (content) {
@@ -52631,9 +52640,7 @@ function generateMarkdown({
   for (const submission of submissions) {
     const ext = getFileExtension(submission.lang) || "txt";
     const fileName = `${padded ? `${padded}-${titleSlug}` : titleSlug}.${ext}`;
-    md += `- [${submission.lang}](${fileName}) — ${formatTimestamp(
-      submission.timestamp
-    )}\n`;
+    md += `- [${submission.lang}](${fileName})\n`;
   }
   md += `\n---\n\n`;
 
@@ -52643,18 +52650,8 @@ function generateMarkdown({
     const ext = getFileExtension(submission.lang) || "txt";
     const fileName = `${padded ? `${padded}-${titleSlug}` : titleSlug}.${ext}`;
 
-    md += `### ${submission.lang} — ${formatTimestamp(
-      submission.timestamp
-    )}\n\n`;
-
-    // Include runtime/memory if present
-    if (submission.runtime || submission.memory) {
-      md += `- Runtime: ${submission.runtime || "N/A"}  \n`;
-      md += `- Memory: ${submission.memory || "N/A"}  \n\n`;
-    }
-
     md += `[View raw solution](${fileName})\n\n`;
-    md += `\n\`\`\`${fence}\n${submission.code}\n\`\`\`\n\n`;
+    md += `\`\`\`${fence}\n${submission.code}\n\`\`\`\n\n`;
   }
 
   return md;
