@@ -1,0 +1,94 @@
+---
+number: 0312
+slug: burst-balloons
+difficulty: Hard
+languages: cpp
+latest_solved_at: 2022-02-01T18:43:11.000Z
+generated_at: 2025-11-20T18:56:08.985Z
+---
+
+# 0312. Burst Balloons
+
+**URL:** [https://leetcode.com/problems/burst-balloons/](https://leetcode.com/problems/burst-balloons/)  
+**Difficulty:** Hard  
+**Languages:** cpp
+
+**Latest Solved At:** 2022-02-01T18:43:11.000Z
+
+---
+
+## Problem Description
+
+<p>You are given <code>n</code> balloons, indexed from <code>0</code> to <code>n - 1</code>. Each balloon is painted with a number on it represented by an array <code>nums</code>. You are asked to burst all the balloons.</p>
+
+<p>If you burst the <code>i<sup>th</sup></code> balloon, you will get <code>nums[i - 1] * nums[i] * nums[i + 1]</code> coins. If <code>i - 1</code> or <code>i + 1</code> goes out of bounds of the array, then treat it as if there is a balloon with a <code>1</code> painted on it.</p>
+
+<p>Return <em>the maximum coins you can collect by bursting the balloons wisely</em>.</p>
+
+<p>&nbsp;</p>
+<p><strong class="example">Example 1:</strong></p>
+
+<pre>
+<strong>Input:</strong> nums = [3,1,5,8]
+<strong>Output:</strong> 167
+<strong>Explanation:</strong>
+nums = [3,1,5,8] --&gt; [3,5,8] --&gt; [3,8] --&gt; [8] --&gt; []
+coins =  3*1*5    +   3*5*8   +  1*3*8  + 1*8*1 = 167</pre>
+
+<p><strong class="example">Example 2:</strong></p>
+
+<pre>
+<strong>Input:</strong> nums = [1,5]
+<strong>Output:</strong> 10
+</pre>
+
+<p>&nbsp;</p>
+<p><strong>Constraints:</strong></p>
+
+<ul>
+	<li><code>n == nums.length</code></li>
+	<li><code>1 &lt;= n &lt;= 300</code></li>
+	<li><code>0 &lt;= nums[i] &lt;= 100</code></li>
+</ul>
+
+
+---
+
+## Solutions
+
+- [cpp](0312-burst-balloons.cpp)
+
+---
+
+[View raw solution](0312-burst-balloons.cpp)
+
+```cpp
+class Solution {
+public:
+    int maxCoins(vector<int>& nums) {
+        
+        int n = nums.size();
+        
+        nums.insert(nums.begin(), 1);
+        nums.push_back(1);
+        
+        vector<vector<int>> dp(n + 2, vector<int>(n + 2, 0));
+        
+        for(int len = 1; len <= n; len++) {
+            for(int i = 1; i <= n - len + 1; i++) {
+                int j = i + len - 1;
+                
+                for(int k = i; k <= j; k++) { 
+                    dp[i][j] = max(dp[i][j], nums[i - 1] * nums[k] * nums[j + 1] +
+                                   dp[i][k - 1] + // left subarray
+                                   dp[k + 1][j]); // right subarray
+                }
+                
+            }
+        }
+        return dp[1][n];
+        
+    }
+};
+```
+
