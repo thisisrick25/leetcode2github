@@ -19,6 +19,7 @@
     "@actions/github": "^6.0.1",
     "@octokit/auth-app": "^8.1.0",
     "@octokit/rest": "^22.0.0",
-    "axios": "^1.11.0"
+    "axios": "^1.11.0",
+    "turndown": "^7.1.2"
   }
 }

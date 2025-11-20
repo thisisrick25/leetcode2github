@@ -1,18 +1,21 @@
-const axios = require('axios');
-const core = require('@actions/core');
+const axios = require("axios");
+const core = require("@actions/core");
 
 async function fetchSubmissions(cookie, lastTimestamp = 0) {
-  const LEETCODE_API_URL = 'https://leetcode.com/api/submissions/';
+  const LEETCODE_API_URL = "https://leetcode.com/api/submissions/";
   const headers = {
-    'Cookie': cookie,
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-    'Referer': 'https://leetcode.com/submissions/',
+    Cookie: cookie,
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+    Referer: "https://leetcode.com/submissions/",
   };
   let allNewSubmissions = [];
   let offset = 0;
   const limit = 20; // API returns 20 submissions per page
 
-  core.info(`Fetching submissions with timestamp greater than ${lastTimestamp}`);
+  core.info(
+    `Fetching submissions with timestamp greater than ${lastTimestamp}`
+  );
 
   try {
     while (true) {
@@ -33,9 +36,9 @@ async function fetchSubmissions(cookie, lastTimestamp = 0) {
             break;
           }
         }
-        
+
         if (newSubmissions.length > 0) {
-            allNewSubmissions = allNewSubmissions.concat(newSubmissions);
+          allNewSubmissions = allNewSubmissions.concat(newSubmissions);
         }
 
         if (foundOlderSubmission || !response.data.has_next) {
@@ -43,7 +46,7 @@ async function fetchSubmissions(cookie, lastTimestamp = 0) {
         }
 
         offset += limit;
-        await new Promise(resolve => setTimeout(resolve, 5000)); // 5s delay
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // 5s delay
       } else {
         break; // No more submissions
       }
@@ -56,30 +59,68 @@ async function fetchSubmissions(cookie, lastTimestamp = 0) {
 }
 
 async function getQuestionNumber(titleSlug) {
-    const LEETCODE_GRAPHQL_URL = 'https://leetcode.com/graphql';
-    const query = `
+  const LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql";
+  const query = `
         query questionData($titleSlug: String!) {
           question(titleSlug: $titleSlug) {
             questionFrontendId
           }
         }
     `;
-    const variables = {
-        titleSlug
-    };
-    try {
-        const response = await axios.post(LEETCODE_GRAPHQL_URL, { query, variables });
-        if (response.data && response.data.data && response.data.data.question) {
-            return response.data.data.question.questionFrontendId;
-        }
-        return null;
-    } catch (error) {
-        core.warning(`Failed to fetch question number for ${titleSlug}: ${error.message}`);
-        return null;
+  const variables = {
+    titleSlug,
+  };
+  try {
+    const response = await axios.post(LEETCODE_GRAPHQL_URL, {
+      query,
+      variables,
+    });
+    if (response.data && response.data.data && response.data.data.question) {
+      return response.data.data.question.questionFrontendId;
     }
+    return null;
+  } catch (error) {
+    core.warning(
+      `Failed to fetch question number for ${titleSlug}: ${error.message}`
+    );
+    return null;
+  }
+}
+
+async function getProblemDetails(titleSlug) {
+  const LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql";
+  const query = `
+        query questionData($titleSlug: String!) {
+          question(titleSlug: $titleSlug) {
+            title
+            difficulty
+            content
+          }
+        }
+    `;
+  const variables = {
+    titleSlug,
+  };
+  try {
+    const response = await axios.post(LEETCODE_GRAPHQL_URL, {
+      query,
+      variables,
+    });
+    if (response.data && response.data.data && response.data.data.question) {
+      const { title, difficulty, content } = response.data.data.question;
+      return { title, difficulty, content };
+    }
+    return { title: null, difficulty: null, content: null };
+  } catch (error) {
+    core.warning(
+      `Failed to fetch problem details for ${titleSlug}: ${error.message}`
+    );
+    return { title: null, difficulty: null, content: null };
+  }
 }
 
 module.exports = {
-    fetchSubmissions,
-    getQuestionNumber,
+  fetchSubmissions,
+  getQuestionNumber,
+  getProblemDetails,
 };
