@@ -52637,12 +52637,6 @@ function generateMarkdown({
 
   // Solutions section
   md += `## Solutions\n\n`;
-  for (const submission of submissions) {
-    const ext = getFileExtension(submission.lang) || "txt";
-    const fileName = `${padded ? `${padded}-${titleSlug}` : titleSlug}.${ext}`;
-    md += `- [${submission.lang}](${fileName})\n`;
-  }
-  md += `\n---\n\n`;
 
   // Detailed sections with code blocks
   for (const submission of submissions) {
@@ -52650,7 +52644,7 @@ function generateMarkdown({
     const ext = getFileExtension(submission.lang) || "txt";
     const fileName = `${padded ? `${padded}-${titleSlug}` : titleSlug}.${ext}`;
 
-    md += `[View raw solution](${fileName})\n\n`;
+    md += `[View raw ${submission.lang} solution](${fileName})\n\n`;
     md += `\`\`\`${fence}\n${submission.code}\n\`\`\`\n\n`;
   }
 
